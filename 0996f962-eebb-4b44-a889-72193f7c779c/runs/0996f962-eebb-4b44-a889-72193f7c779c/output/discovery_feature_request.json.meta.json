@@ -1,0 +1,35 @@
+{
+  "name": "discovery_feature_request",
+  "path": "discovery_feature_request.json",
+  "language": "unknown",
+  "content": "Discovered 0 files for module feature_request.",
+  "checksum": "6833900b1a7fc3fb14c4e5d42b7eb5ef4674168a0b5713586a2a43e65e3a0dd4",
+  "created_at": "2026-08-06T22:57:55.171000Z",
+  "source": "LegacyDiscoveryAgent",
+  "status": "pending",
+  "metadata": {},
+  "artifact_type": "discovery_result",
+  "module_name": "feature_request",
+  "legacy_files": [],
+  "python_files": [],
+  "documentation_files": [],
+  "database_files": [],
+  "configuration_files": [],
+  "missing_files": [
+    "models.py",
+    "schemas.py",
+    "service.py",
+    "router.py"
+  ],
+  "warnings": [
+    "No legacy C++ or Proto files found for this module."
+  ],
+  "statistics": {
+    "total_files": 0,
+    "legacy_count": 0,
+    "python_count": 0,
+    "docs_count": 0,
+    "db_count": 0
+  },
+  "total_estimated_tokens": 0
+}

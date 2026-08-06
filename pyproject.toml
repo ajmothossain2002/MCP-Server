@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "erp-migration-mcp"
+version = "1.0.0"
+description = "Autonomous ERP Migration Platform (C++ to Python) with MCP Server integration."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [
+    { name = "Platform Engineering" }
+]
+dependencies = [
+    "fastmcp>=0.1.0",
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "alembic>=1.13.0",
+    "jinja2>=3.1.0",
+    "tenacity>=8.2.0",
+    "gitpython>=3.1.0",
+    "docker>=7.0.0",
+    "orjson>=3.9.0",
+    "msgspec>=0.18.0",
+    "python-dotenv>=1.0.0",
+    "tiktoken>=0.6.0",
+    "pytest>=8.0.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0"
+]
+
+[project.scripts]
+erp = "cli.app:app"
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "agents",
+    "cli",
+    "config",
+    "knowledge",
+    "mcp",
+    "scripts",
+    "shared",
+    "workflows"
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.mypy]
+ignore_missing_imports = true
