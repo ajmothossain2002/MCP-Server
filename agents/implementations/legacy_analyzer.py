@@ -41,15 +41,23 @@ class ServiceDef(BaseModel):
     name: str
     rpcs: List[RpcDef] = Field(default_factory=list)
 
+class MessageFieldDef(BaseModel):
+    name: str
+    type: str
+
 class MessageDef(BaseModel):
     name: str
-    fields: Dict[str, str] = Field(default_factory=dict, description="Field name to type mapping")
+    fields: List[MessageFieldDef] = Field(default_factory=list, description="List of fields in the message")
+
+class EnumDef(BaseModel):
+    name: str
+    values: List[str] = Field(default_factory=list)
 
 class LLMExtraction(BaseModel):
     """Pydantic model used explicitly for LLM structured output parsing."""
     services: List[ServiceDef] = Field(default_factory=list)
     messages: List[MessageDef] = Field(default_factory=list)
-    enums: Dict[str, List[str]] = Field(default_factory=dict)
+    enums: List[EnumDef] = Field(default_factory=list)
     tables: List[TableDef] = Field(default_factory=list)
     business_rules: List[str] = Field(default_factory=list)
     validation_rules: List[str] = Field(default_factory=list)
@@ -66,7 +74,7 @@ class LegacyModuleAnalysis(BaseArtifact):
     # Domain Knowledge
     services: List[ServiceDef] = Field(default_factory=list)
     messages: List[MessageDef] = Field(default_factory=list)
-    enums: Dict[str, List[str]] = Field(default_factory=dict)
+    enums: List[EnumDef] = Field(default_factory=list)
     tables: List[TableDef] = Field(default_factory=list)
     
     # Logic & Policies

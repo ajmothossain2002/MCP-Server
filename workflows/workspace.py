@@ -42,6 +42,18 @@ class WorkspaceManager:
             
         return migration_id
 
+    def save_state(self, migration_id: str, state_json: str) -> None:
+        """Saves the current MigrationState JSON to disk."""
+        state_path = self.get_workspace_path(migration_id) / "state.json"
+        filesystem.write_atomic(str(state_path), state_json)
+
+    def load_state(self, migration_id: str) -> Optional[str]:
+        """Loads the MigrationState JSON from disk, if it exists."""
+        state_path = self.get_workspace_path(migration_id) / "state.json"
+        if state_path.exists():
+            return filesystem.read(str(state_path))
+        return None
+
     def get_workspace_path(self, migration_id: str) -> Path:
         """Helper to get the absolute root path for a specific run."""
         return self.runs_dir / migration_id

@@ -4,11 +4,15 @@ Typer commands mapping to Orchestrator functions.
 """
 import asyncio
 import uuid
+import yaml
+import os
+from rich.prompt import Prompt, Confirm
 import typer
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from cli.display import console, print_header, print_success, print_error, print_summary, print_warning
 from cli.progress import create_progress_context
+from cli import file_picker
 
 from workflows.orchestrator import Orchestrator
 from workflows.workspace import WorkspaceManager
@@ -91,11 +95,99 @@ def print_final_summary(orch: Orchestrator):
 # ---------------------------------------------------------------------------
 # Typer Commands
 # ---------------------------------------------------------------------------
-def migrate(module_name: str = typer.Argument(..., help="Name of the ERP module to migrate")):
-    print_header(f"Starting Full Migration Pipeline for: {module_name}")
+def migrate(config_path: Optional[str] = typer.Argument(None, help="Optional path to a config.yaml file")):
+    if config_path:
+        print_header(f"Starting Full Migration Pipeline from config: {config_path}")
+        with open(config_path, "r") as f:
+            config_data = yaml.safe_load(f)
+        
+        module_name = config_data.get("module")
+        proto_path = config_data.get("proto_path")
+        hpp_path = config_data.get("hpp_path")
+        cpp_path = config_data.get("cpp_path")
+        db_config = config_data.get("database", {})
+        
+        db_mode = db_config.get("mode")
+        if db_mode == "initializer":
+            database_source = {"type": "initializer", "path": db_config.get("path")}
+        elif db_mode == "paste":
+            database_source = {"type": "paste", "content": db_config.get("content")}
+        else:
+            database_source = {"type": "skip"}
+            
+        # We could also read provider from config if needed.
+    else:
+        console.print("\n[bold cyan]======================================================[/bold cyan]")
+        console.print("[bold cyan]Software Migration Platform[/bold cyan]")
+        console.print("[bold cyan]AI Migration Assistant[/bold cyan]")
+        console.print("[bold cyan]======================================================[/bold cyan]\n")
+        
+        module_name = Prompt.ask("Enter Module Name", default="Feature Request")
+        proto_path = file_picker.select_proto()
+        if not proto_path or not os.path.isfile(proto_path) or not proto_path.endswith('.proto'):
+            print_warning("Operation cancelled by user.")
+            return
+        print_success("Proto Selected")
+        
+        hpp_path = file_picker.select_header()
+        if not hpp_path or not os.path.isfile(hpp_path) or not hpp_path.endswith('.hpp'):
+            print_warning("Operation cancelled by user.")
+            return
+        print_success("Header Selected")
+        
+        cpp_path = file_picker.select_source()
+        if not cpp_path or not os.path.isfile(cpp_path) or not cpp_path.endswith('.cpp'):
+            print_warning("Operation cancelled by user.")
+            return
+        print_success("Source Selected")
+        
+        console.print("\n[bold yellow]Database Information[/bold yellow]")
+        console.print("Choose:")
+        console.print("1. Paste createTable()")
+        console.print("2. Provide DatabaseInitializer.cpp")
+        console.print("3. Skip database")
+        db_choice = Prompt.ask("Selection", choices=["1", "2", "3"], default="3")
+        
+        database_source = {"type": "skip"}
+        if db_choice == "1":
+            console.print("Paste the createTable() block. Finish with Ctrl+D (Linux) or Ctrl+Z (Windows).")
+            lines = []
+            try:
+                while True:
+                    line = input()
+                    lines.append(line)
+            except EOFError:
+                pass
+            database_source = {"type": "paste", "content": "\n".join(lines)}
+        elif db_choice == "2":
+            db_path = file_picker.select_database_initializer()
+            if not db_path or not os.path.isfile(db_path) or not db_path.endswith('.cpp'):
+                print_warning("Operation cancelled by user.")
+                return
+            print_success("Database Initializer Selected")
+            database_source = {"type": "initializer", "path": db_path}
+            
+        console.print(f"\n[bold green]Module:[/bold green] {module_name}")
+        console.print(f"[bold green]Proto:[/bold green] {proto_path}")
+        console.print(f"[bold green]Header:[/bold green] {hpp_path}")
+        console.print(f"[bold green]Source:[/bold green] {cpp_path}")
+        console.print(f"[bold green]Database:[/bold green] {database_source['type']}")
+        
+        if not Confirm.ask("Proceed?"):
+            print_warning("Migration cancelled.")
+            return
+
     orch = _init_orchestrator()
     
-    result = _run_async(_execute_with_ui(orch, module_name, orch.execute_migration(module_name)))
+    task_payload = {
+        "module_name": module_name,
+        "proto_path": proto_path,
+        "hpp_path": hpp_path,
+        "cpp_path": cpp_path,
+        "database_source": database_source
+    }
+    
+    result = _run_async(_execute_with_ui(orch, module_name, orch.execute_migration(task_payload)))
     
     if result.success:
         print_success("Migration Completed Successfully.")
@@ -111,9 +203,19 @@ def analyze(module_name: str = typer.Argument(..., help="Name of the ERP module 
     async def _analyze():
         orch.context.state.current_stage = "STARTING"
         pipeline = ["LegacyDiscoveryAgent", "LegacyAnalyzerAgent", "BusinessRuleExtractorAgent"]
+        
+        # Analyze expects the same payload structure now
+        task_payload = {
+            "module_name": module_name,
+            "proto_path": "", # Dummy for analyze command if not interactive
+            "hpp_path": "",
+            "cpp_path": "",
+            "database_source": {"type": "skip"}
+        }
+        
         for agent_name in pipeline:
             agent = agent_registry.get(agent_name)()
-            if not await orch._run_agent(agent, {"module_name": module_name}):
+            if not await orch._run_agent(agent, task_payload):
                 return False
         return True
         

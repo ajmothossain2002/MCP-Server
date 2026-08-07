@@ -7,7 +7,7 @@ import sys
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, ValidationError
 
-from config.models import OpenAIConfig, PathConfig, LoggingConfig, ProjectConfig
+from config.models import OpenAIConfig, PathConfig, LoggingConfig, ProjectConfig, GeminiConfig, LLMConfig
 
 class Settings(BaseSettings):
     """
@@ -15,9 +15,16 @@ class Settings(BaseSettings):
     Fields are automatically loaded from environment variables or .env file.
     Case-insensitive matching is applied (e.g., openai_api_key matches OPENAI_API_KEY).
     """
+    # LLM Provider Settings
+    llm_provider: str = Field(default="openai", description="Active LLM provider (gemini, openai, openrouter)")
+
     # OpenAI Settings
-    openai_api_key: str = Field(..., description="Required OpenAI API Key")
+    openai_api_key: str = Field(default="", description="OpenAI API Key")
     openai_model: str = Field(default="gpt-4o", description="OpenAI Model")
+
+    # Gemini Settings
+    google_api_key: str = Field(default="", description="Google API Key")
+    gemini_model: str = Field(default="gemini-2.5-pro", description="Gemini Model")
 
     # Path Settings
     project_root: str = Field(..., description="Required project root path")
@@ -37,9 +44,18 @@ class Settings(BaseSettings):
     )
 
     @property
+    def llm(self) -> LLMConfig:
+        return LLMConfig(provider=self.llm_provider)
+
+    @property
     def openai(self) -> OpenAIConfig:
         """Returns typed OpenAI configuration."""
         return OpenAIConfig(api_key=self.openai_api_key, model=self.openai_model)
+
+    @property
+    def gemini(self) -> GeminiConfig:
+        """Returns typed Gemini configuration."""
+        return GeminiConfig(api_key=self.google_api_key, model=self.gemini_model)
 
     @property
     def paths(self) -> PathConfig:
