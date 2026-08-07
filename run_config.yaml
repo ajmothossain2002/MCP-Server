@@ -1,0 +1,7 @@
+module: feature request
+proto_path: C:\ERP-py\ERP\legacy\ERPBackend\schema\core\feature_request\feature_request.proto
+hpp_path: C:\ERP-py\ERP\legacy\ERPBackend\include\core\feature_request\FeatureRequestService.hpp
+cpp_path: C:\ERP-py\ERP\legacy\ERPBackend\src\core\feature_request\FeatureRequestService.cpp
+database:
+  mode: paste
+  content: paste

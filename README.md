@@ -1,6 +1,6 @@
 # Software Migration Platform
 
-> AI-powered migration platform for transforming legacy software into modern architectures using autonomous agents.
+AI-powered migration platform for transforming legacy software into modern architectures using autonomous agents.
 
 ---
 
@@ -98,6 +98,46 @@ Future Providers
 ---
 
 ## Backend
+
+- Python
+- Typer
+- Rich
+- Pydantic
+- SQLAlchemy
+- Alembic
+- FastMCP
+- Tenacity
+
+---
+
+# Switching Providers
+
+The platform uses `openai` as the default provider and strictly validates configuration on startup.
+
+You can switch the LLM provider by updating `LLM_PROVIDER` in your `.env` file.
+
+**Example: OpenAI (Default)**
+```env
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-4o
+```
+
+**Example: Gemini**
+```env
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=AIza...
+GEMINI_MODEL=gemini-2.5-pro
+```
+
+**Example: OpenRouter**
+```env
+LLM_PROVIDER=openrouter
+OPENAI_API_KEY=sk-or-...
+OPENAI_MODEL=anthropic/claude-3.5-sonnet
+```
+
+---
 
 - Python
 - Typer

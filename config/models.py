@@ -1,12 +1,22 @@
 """
 Typed configuration models for the ERP Migration MCP project.
 """
+from typing import Optional
 from pydantic import BaseModel, Field
 
 class OpenAIConfig(BaseModel):
     """Configuration for OpenAI services."""
-    api_key: str = Field(..., description="The API key for authenticating with OpenAI.")
+    api_key: Optional[str] = Field(default=None, description="The API key for authenticating with OpenAI.")
     model: str = Field(default="gpt-4o", description="The default OpenAI model to use for generations.")
+
+class GeminiConfig(BaseModel):
+    """Configuration for Google Gemini services."""
+    api_key: Optional[str] = Field(default=None, description="The API key for authenticating with Google Gemini.")
+    model: str = Field(default="gemini-2.5-pro", description="The default Gemini model to use.")
+
+class LLMConfig(BaseModel):
+    """Global LLM Provider configuration."""
+    provider: str = Field(default="gemini", description="Active LLM provider (gemini, openai, openrouter).")
 
 class PathConfig(BaseModel):
     """Project paths configuration."""

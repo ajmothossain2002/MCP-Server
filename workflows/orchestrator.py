@@ -28,10 +28,21 @@ class Orchestrator:
         # 1. Discover all agents dynamically, satisfying the requirement to never manually instantiate them inline.
         agent_registry.discover("agents.implementations")
         
-    async def resume(self):
+    async def resume(self, module_name: str = "unknown"):
         """Resumes a paused or failed migration from its last completed stage."""
         self.context.logger.info("Resuming migration from previous state...")
-        # Implementation would read context.state.completed_stages and skip them
+        state_json = self.context.workspace.load_state(self.context.migration_id)
+        if state_json:
+            self.context.state = MigrationState.model_validate_json(state_json)
+            self.context.logger.info(f"Loaded state, last completed stages: {self.context.state.completed_stages}")
+        
+        # We need a valid task payload, we can reconstruct it from module_name if not saved in state
+        task_payload = {
+            "module_name": module_name,
+            "module_folder": ".", # Not fully recoverable without storing, but fine for resume of generators
+            "database_source": {"type": "skip"}
+        }
+        return await self.execute_migration(task_payload)
         
     async def restart(self):
         """Restarts the migration from the beginning, clearing state."""
@@ -49,7 +60,7 @@ class Orchestrator:
         self.context.logger.warning("Initiating global rollback...")
         # In a real environment, iterate self.context.state.completed_stages in reverse and call agent.rollback()
         
-    async def execute_migration(self, module_name: str) -> MigrationResult:
+    async def execute_migration(self, task: dict) -> MigrationResult:
         """Runs the entire migration pipeline for a given module."""
         self.context.state.start_time = datetime.now(timezone.utc)
         self.context.state.current_stage = "STARTING"
@@ -78,6 +89,10 @@ class Orchestrator:
             if not agent_class:
                 return self._build_result(False, f"CRITICAL: Agent {agent_name} not found in registry.")
                 
+            if agent_name in self.context.state.completed_stages:
+                self.context.logger.info(f"Skipping {agent_name} as it was already completed.")
+                continue
+                
             agent = agent_class()
             
             # Generate Progress Event
@@ -85,7 +100,7 @@ class Orchestrator:
             self._log_progress(progress, f"{agent.description}")
             
             # Execution with tracking
-            if not await self._run_agent(agent, {"module_name": module_name}):
+            if not await self._run_agent(agent, task):
                 return self._build_result(False, f"Migration critically failed at stage: {agent_name}")
                 
         # ---------------------------------------------------------
@@ -104,7 +119,7 @@ class Orchestrator:
         while iteration < max_iterations:
             self._log_progress(int(((len(pipeline_steps)) / total_steps) * 100), f"Running Review Pass {iteration + 1}...")
             
-            if not await self._run_agent(review_agent, {"module_name": module_name}):
+            if not await self._run_agent(review_agent, task):
                 return self._build_result(False, "Migration failed during Review stage.")
                 
             report: ReviewReport = self.context.shared_state.get("review_report")
@@ -118,7 +133,7 @@ class Orchestrator:
             # If not 100, run autofix
             self._log_progress(int(((len(pipeline_steps) + 0.5) / total_steps) * 100), f"Review Score: {review_score}. Running AutoFix Pass {iteration + 1}...")
             
-            if not await self._run_agent(fix_agent, {"module_name": module_name}):
+            if not await self._run_agent(fix_agent, task):
                 return self._build_result(False, "Migration failed during AutoFix stage.")
                 
             iteration += 1
@@ -132,7 +147,7 @@ class Orchestrator:
         self._log_progress(95, "Running final deterministic validation...")
         validation_agent = agent_registry.get("ValidationAgent")()
         
-        if not await self._run_agent(validation_agent, {"module_name": module_name}):
+        if not await self._run_agent(validation_agent, task):
             return self._build_result(False, "Migration failed during Validation stage.")
             
         validation_report: ValidationReport = self.context.shared_state.get("validation_report")
@@ -170,6 +185,10 @@ class Orchestrator:
             
             duration = time.time() - start_ts
             self.context.state.statistics[f"{stage_name}_duration_s"] = round(duration, 2)
+            
+            # Persist state to disk
+            self.context.workspace.save_state(self.context.migration_id, self.context.state.model_dump_json())
+            
             return True
             
         except Exception as e:
