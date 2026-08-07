@@ -2,6 +2,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+# Runtime workspaces
+workspace/
+runs/
+output/
+temp/
+logs/
+
+# UUID runtime folders
+0996f962-*/
 
 .Python
 build/
